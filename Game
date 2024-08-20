@@ -1,0 +1,119 @@
+import pygame
+import sys
+import random
+
+pygame.init()
+screen = pygame.display.set_mode((900, 500))
+pygame.display.set_caption("Runner")
+clock = pygame.time.Clock()
+font = pygame.font.Font(None, 50)
+
+
+img = pygame.image.load('/Users/katarudenko/Desktop/PycharmProjects/Back.jpg').convert()
+ground = pygame.image.load('/Users/katarudenko/Desktop/PycharmProjects/ground.jpg').convert()
+player_surf = pygame.image.load('/Users/katarudenko/Desktop/PycharmProjects/Player.png').convert_alpha()
+cat_surf = pygame.image.load('/Users/katarudenko/Desktop/PycharmProjects/cat.png').convert_alpha()
+
+
+img = pygame.transform.scale(img, (900, 400))
+ground = pygame.transform.scale(ground, (900, 100))
+player_surf = pygame.transform.scale(player_surf, (int(player_surf.get_width() * 0.15), int(player_surf.get_height() * 0.15)))  # Уменьшение размера игрока
+cat_surf = pygame.transform.scale(cat_surf, (int(cat_surf.get_width() * 0.3), int(cat_surf.get_height() * 0.3)))  # Увеличение размера кота в 2 раза
+
+
+player_rect = player_surf.get_rect(midbottom=(80, 400))
+player_gravity = 0
+player_jump = -22
+high_jump = -35
+gravity_force = 0.8
+
+
+cat_list = []
+cat_speed = 4
+spawn_cat = pygame.USEREVENT + 1
+pygame.time.set_timer(spawn_cat, 3000)
+
+
+score = 0
+game_active = True
+jump_count = 0
+
+def display_score():
+    score_surf = font.render(f'Score: {score}', True, 'Grey')
+    score_rect = score_surf.get_rect(center=(450, 50))
+    screen.blit(score_surf, score_rect)
+
+def player_animation():
+    global player_gravity, jump_count
+    player_gravity += gravity_force
+    player_rect.y += player_gravity
+    if player_rect.bottom >= 400:
+        player_rect.bottom = 400
+        jump_count = 0
+
+def move_cats(cats):
+    for cat_rect in cats:
+        cat_rect.x -= cat_speed
+    return [cat for cat in cats if cat.x > -100]
+
+def check_collision(cats):
+    for cat_rect in cats:
+        if player_rect.colliderect(cat_rect):
+            return False
+    return True
+
+def reset_game():
+    global cat_list, player_rect, player_gravity, score
+    cat_list.clear()
+    player_rect.midbottom = (80, 400)
+    player_gravity = 0
+    score = 0
+
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+
+        if game_active:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    if player_rect.bottom == 400:
+                        player_gravity = player_jump
+                        jump_count = 1
+                    elif jump_count == 1:
+                        player_gravity = high_jump
+                        jump_count += 1
+
+            if event.type == spawn_cat:
+
+                cat_rect = cat_surf.get_rect(midbottom=(random.randint(900, 1100), 440))
+                cat_list.append(cat_rect)
+        else:
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                game_active = True
+                reset_game()
+
+    if game_active:
+        screen.blit(img, (0, 0))
+        screen.blit(ground, (0, 400))
+        display_score()
+
+        player_animation()
+        screen.blit(player_surf, player_rect)
+
+        cat_list = move_cats(cat_list)
+        for cat_rect in cat_list:
+            screen.blit(cat_surf, cat_rect)
+
+        game_active = check_collision(cat_list)
+        if game_active:
+            score += 1
+
+    else:
+        end_game_surf = font.render(f'Game Over! Score: {score}', True, 'Red')
+        end_game_rect = end_game_surf.get_rect(center=(450, 250))
+        screen.blit(end_game_surf, end_game_rect)
+
+    pygame.display.update()
+    clock.tick(60)
